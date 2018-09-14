@@ -1,0 +1,38 @@
+<div class="container">
+    <div class="col-md-12">
+
+        <div class="heading">
+        <h1>Saved Articles</h1>
+        <p class="sub-text">Click on a headline to read the full article, or leave a note on an article.</p>
+        <hr>
+        </div>
+
+    <div class="col-md-12 savedStory">
+        {{#each stories}}
+        <div class="data" dataTitle="{{title}}" dataLink="{{url}}" dataAuthor="{{author}}" dataContent="{{content}}" dataImg="{{img}}">
+
+            <h2>
+                <a href="{{url}}">{{title}}</a>
+            </h2>
+
+            <p class="content">{{content}}</p>
+
+            {{#if author}}
+            <h4>Author: {{author}}</h4>
+            {{else}}
+            <h4>No Author</h4>
+            {{/if}} 
+            
+            {{#if img}}
+            <img src="{{img}}" alt="story"> {{else}}
+            <img src="https://www.savonix.com/wp-content/uploads/2016/02/techcrunch-logo.png" alt="no preview"> {{/if}}
+            <button type="button" class="btn btn-dark addNotes" data-toggle="modal" data-target="#notes{{this._id}}" data-id={{this._id}}>Add a Comment</button>
+            <button type="button" class="btn btn-danger delete" data-id={{this._id}}>Delete</button>
+        </div>
+        <br>
+        {{/each}}
+        
+    </div>
+
+    </div>
+</div>
