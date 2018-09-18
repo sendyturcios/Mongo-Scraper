@@ -44,8 +44,11 @@ mongoose.connect(mongoConnect, function(error){
     if (error) console.log(error);
     console.log("mongoose is connected");
 });
-mongoose.Promise = global.Promise;
 
+// Set mongoose to leverage built in JavaScript ES6 Promises
+// Connect to the Mongo DB
+mongoose.Promise = Promise;
+mongoose.connect(MONGODB_URI);
 
 // Start the server
 app.listen(PORT, function() {

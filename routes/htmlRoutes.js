@@ -11,100 +11,100 @@ var mongoose = require("mongoose");
 //require models 
 var db = require("../models");
 
-let url = "https://www.npr.org/";
 
+
+let url = "https://npr.org/";
 router.get("/scrape", function (req, res) {
-  
-    var allArticles = [];
-   
-    request(url, function (err, response, html) {
+    var allStories = [];
+    request(url, function (err, response, body) {
         if (err) console.log(err);
 
-        let $ = cheerio.load(html)
-        
-        let articles = $(".story-wrap");
-     
-        articles.each(function (i, article) {
+        let $ = cheerio.load(body)
+        let stories = $(".story-wrap");
+        stories.each(function (i, article) {
             let articleInfo = {
-                title: $(article).children("a").text(),
+                title: $(article).children("h3.title").text().trim(),
                 url: $(article).children("a").attr("href"),
                 content: $(article).children("p").text().trim(),
             }
             
-            //send to db -- create collection
-            db.Article.create(result)
-            .then(function(dbArticle) {
-                console.log(dbArticle);
-            })
+            //send to db -- create an article in Articles collection
+            db.Article.create(articleInfo)
                 .catch(function (err) {
-                    return res.json(err);   
+                    console.log("Scrape was successful");
                 });
         });
     });
-    //Scrape complete
+    //when scrape is complete
     res.send("Scrape Complete")
 });
 
-//render all info from db
+
+//when home page loads, get all articles from the db
 router.get("/", function(req, res){ 
-
-    db.Article.find()
-    .then(function(dbArticle){
-
-        res.json(dbArticle);
+    //grab all documents
+    db.Article.find().sort({date: -1})
+    .then(function(stories){
+        let allArticles = {
+            stories: stories
+        };
+        res.render("index", allArticles);
     })
     .catch(function(err){
         res.json(err);
     });
 });
 
-//render saved articles 
-router.get("/articles", function(req, res){
+
+
+//route to render the saved articles 
+router.get("/stories", function(req, res){
     db.Article.find({
         "saved": true
     })
     .populate("notes")
-    .exec(function(err, articles){
+    .exec(function(err, stories){
         let allArticles = {
-            articles: articles
+            stories: stories
         };
     res.render("saved", allArticles);
     });
 });
 
-//retrieve saved articles by id 
-router.get("/articles/:id", function (req,res){
+//route to get saved story by id 
+router.get("/stories/:id", function (req,res){
     db.Article.findOne({
         "_id": req.params.id
     })
-    .populate("note")
-    .then(function(dbArticle){
-
-        res.json(dbArticle);
-    })
-    .catch(function(err){ 
-        res.json(err);
+    .populate("notes")
+    .exec(function(err, stories){
+        if (err) {
+            console.log(err);
+        }
+        else {
+            res.json(stories);
+        }
     });
 });
 
-// save article 
+// save story 
 router.post("/articles/save/:id", function (req,res){
     db.Article.findOneAndUpdate({
         "_id": req.params.id
     }, {
         "saved": true
     })
-    .catch(function(err, articles){
+    .exec(function(err, stories){
         if (err) {
             console.log(err);
         }
         else {
-            res.json(articles);
+            res.json(stories);
         }
     });
 });
 
-//delete article 
+//delete story 
 router.post("/articles/delete/:id", function (req,res){
     console.log("deleted");
 
@@ -113,16 +113,74 @@ router.post("/articles/delete/:id", function (req,res){
     }, {
         "saved": false
     })
-    .catch(function(err, articles){
+    .exec(function(err, stories){
         if (err) {
             console.log(err);
         }
         else {
-            res.json(articles);
+            res.json(stories);
         }
     });
 });
 
+//add notes to an article 
+router.post("/notes/save/:id", function (req,res){
+    console.log("notes added");
+    var newNotes = new Notes({
+        body: req.body.text,
+        article: req.params.id
+    });
+    newNotes.save(function (err, notes){
+        console.log(notes.body);
+        if (err){
+            console.log(err)
+        }else {
+            db.Article.findOneAndUpdate({
+                "_id": req.params.id
+            }, {
+                $push: {
+                    "notes": notes
+                }
+            })
+            .exec(function(err, notes){
+                if (err) {
+                    console.log(err);
+                }
+                else {
+                    res.send(notes);
+                }
+            });
+        }
+    });    
+});
+
+//delete notes from an article 
+router.delete("/notes/delete/:notes_id/:articles_id", function (req,res){
+    Notes.findOneAndRemove({
+        "_id": req.params.notes_id
+    }, function (err){
+        if (err){
+            conosole.log(err);
+            res.send(err);
+        }else{
+            db.Article.findOneAndUpdate({
+                "_id": req.params.notes_id
+            }, {
+                $pull: {
+                    "notes": req.params.articles_id
+                }
+            })
+            .exec(function (err){
+                if (err){
+                    console.log(err);
+                    res.send(err)
+                } else {
+                    res.send("Note Deleted!");
+                }
+            });
+        }
+    });
+});
 
 
 // export to use in server.js 
